@@ -30,25 +30,26 @@ for m in genai.list_models():
 # print(response.text)
 
 # Path to XML files
+#TODO generalize the file loading
 xml_file_2021 = "data/19092400-FlussoEMUR_2021-01-01_2021-12-31_crypt.xml"
 xml_file_2022 = "data/19092400-FlussoEMUR_2022-01-01_2022-12-31_crypt.xml"
 xml_file_2023 = "data/19092400-FlussoEMUR_2023-01-01_2023-12-31_crypt.xml"
 
 # Parse the XML file
-tree = ET.parse(xml_file_2021)
+tree_2021 = ET.parse(xml_file_2021)
+tree_2022 = ET.parse(xml_file_2022)
+tree_2023 = ET.parse(xml_file_2023)
 
 # Get the root element
-root = tree.getroot()
+root_2021 = tree_2021.getroot()
+root_2022 = tree_2022.getroot()
+root_2023 = tree_2023.getroot()
 
-# Show the schema of the XML data
-schema = ET.tostring(root, encoding="unicode", method="xml")
-#print(schema)
 
 # convert xml to pandas dataframe
-def xml2df(xml_data):
-    root = ET.XML(xml_data) # element tree
+def xml2df(xml_data_root):
     all_records = []
-    for i, child in enumerate(root):
+    for i, child in enumerate(xml_data_root):
         record = {}
         for subchild in child:
             tag = subchild.tag.split("}")[1] # remove url from the tag
@@ -57,17 +58,23 @@ def xml2df(xml_data):
     return pd.DataFrame(all_records)
 
 # Convert the XML data to a pandas DataFrame
-df = xml2df(schema)
+df_2021 = xml2df(root_2021)
+df_2022 = xml2df(root_2022)
+df_2023 = xml2df(root_2023)
 
 
 # Create a Spark session
 spark = SparkSession.builder.getOrCreate()
 
 # Read the dataframe into a Spark DataFrame
-spark_df = spark.createDataFrame(df)
+spark_df_2021 = spark.createDataFrame(df_2021)
+spark_df_2022 = spark.createDataFrame(df_2022)
+spark_df_2023 = spark.createDataFrame(df_2023)
 
 # create a temporary view
-spark_df.createOrReplaceTempView("patients2021")
+spark_df_2021.createOrReplaceTempView("patients2021")
+spark_df_2022.createOrReplaceTempView("patients2022")
+spark_df_2023.createOrReplaceTempView("patients2023")
 
 
 # cycle to take inputs from the user
