@@ -69,17 +69,6 @@ spark_df = spark.createDataFrame(df)
 # create a temporary view
 spark_df.createOrReplaceTempView("patients2021")
 
-# TESTING output of gemini response to see the sql query
-prompt = "create a spark sql query to get the data, the available tables are" + str(spark.catalog.listTables())+ "\n while the schema is: " + str(spark_df.columns)
-response = model.generate_content("Find the number of patients for all years." + prompt)
-
-# filter the sql query (localized by ```sql <sql query>```)
-sql_query = response.text[response.text.find("sql") + 4:response.text.find("```", response.text.find("sql"))]
-
-if len(sql_query) == 0:
-    print("No SQL query found")
-
-spark.sql(sql_query).show()
 
 # cycle to take inputs from the user
 while True:
@@ -91,9 +80,18 @@ while True:
     if user_input == "exit":
         break
     else:
-        sql_prompt_to_pass = "create a sql query to get the data, the schema is: " + spark_df.columns
-        response = model.generate_content(user_input)
-        print(response.text)
+        prompt = "create a spark sql query to get the data, the available tables are" + str(spark.catalog.listTables())+ "\n while the schema is: " + str(spark_df.columns)
+        response = model.generate_content(user_input + prompt)
+
+        # filter the sql query (localized by ```sql <sql query>```)
+        sql_query = response.text[response.text.find("sql") + 4:response.text.find("```", response.text.find("sql"))]
+
+        if len(sql_query) == 0:
+            print("No SQL query found")
+            continue
+        
+        spark.sql(sql_query).show()
+
 
     
 
