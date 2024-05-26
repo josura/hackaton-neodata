@@ -89,6 +89,9 @@ while True:
         if len(sql_query) == 0:
             print("No SQL query found")
             continue
+
+        # TODO add error handling for the sql query
+        # TODO add sanitization for the sql query
         
         spark.sql(sql_query).show()
 
