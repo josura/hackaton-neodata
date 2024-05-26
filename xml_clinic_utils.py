@@ -15,7 +15,7 @@ def getLeafNodes(root):
             leafNodes.append([child.tag.split("}")[1], list_child])
     return leafNodes
 
-# get leaf nodes of the xml tree at the root item as a list of strings ( the path is separated by - until a leaf node is reached)
+# get leaf nodes of the xml tree at the root item as a list of strings ( the path is separated by _ until a leaf node is reached)
 def getLeafNodesString(root):
     leafNodes = []
     if len(root) == 0:
@@ -27,7 +27,7 @@ def getLeafNodesString(root):
             leafNodes.append(child.tag.split("}")[1])
         else:
             for child_str in list_child:
-                leafNodes.append(child.tag.split("}")[1] + "-" + child_str)
+                leafNodes.append(child.tag.split("}")[1] + "_" + child_str)
     return leafNodes
 
 
@@ -94,7 +94,7 @@ def xml2dfUnion(root):
         for feature in generalSchema:
             current_item = item
             feature_final_text = ""
-            features_splitted = feature.split("-")
+            features_splitted = feature.split("_")
             leaf_node = features_splitted[-1]
             # check if the path of the feature exists in the item
             for current_node in features_splitted:

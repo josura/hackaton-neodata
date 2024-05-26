@@ -4,6 +4,9 @@ from pyspark.sql import SparkSession
 # xml parsing
 import xml.etree.ElementTree as ET
 
+# xml to pandas
+from xml_clinic_utils import xml2dfUnion as xml2df
+
 # pandas
 import pandas as pd
 
@@ -46,30 +49,29 @@ root_2022 = tree_2022.getroot()
 root_2023 = tree_2023.getroot()
 
 
-# convert xml to pandas dataframe
-def xml2df(xml_data_root):
-    all_records = []
-    for i, child in enumerate(xml_data_root):
-        record = {}
-        for subchild in child:
-            tag = subchild.tag.split("}")[1] # remove url from the tag
-            record[tag] = subchild.text
-            all_records.append(record)
-    return pd.DataFrame(all_records)
-
 # Convert the XML data to a pandas DataFrame
 df_2021 = xml2df(root_2021)
 df_2022 = xml2df(root_2022)
 df_2023 = xml2df(root_2023)
+
+# remove all null columns
+df_2021 = df_2021.dropna(axis=1, how='all')
+df_2022 = df_2022.dropna(axis=1, how='all')
+df_2023 = df_2023.dropna(axis=1, how='all')
+
+# convert the columns to string
+df_2021 = df_2021.astype(str)
+df_2022 = df_2022.astype(str)
+df_2023 = df_2023.astype(str)
 
 
 # Create a Spark session
 spark = SparkSession.builder.getOrCreate()
 
 # Read the dataframe into a Spark DataFrame
-spark_df_2021 = spark.createDataFrame(df_2021)
-spark_df_2022 = spark.createDataFrame(df_2022)
-spark_df_2023 = spark.createDataFrame(df_2023)
+spark_df_2021 = spark.createDataFrame(df_2021, schema = df_2021.columns.to_list())
+spark_df_2022 = spark.createDataFrame(df_2022, schema = df_2022.columns.to_list())
+spark_df_2023 = spark.createDataFrame(df_2023, schema = df_2023.columns.to_list())
 
 # create a temporary view
 spark_df_2021.createOrReplaceTempView("patients2021")
@@ -81,17 +83,28 @@ spark_df_2023.createOrReplaceTempView("patients2023")
 while True:
     print("Available views are:")
     print(spark.catalog.listTables())
-    print("The schema of the data is: ")
-    print(spark_df.columns)
+    print("The schemas of the data for the tables are: ")
+    # TODO generalize the printing
+    print(spark_df_2021.columns)
+    print(spark_df_2022.columns)
+    print(spark_df_2023.columns)
     user_input = input("Enter what you want from the data (type exit to stop the program), this will create an sql query to search for the data: ")
     if user_input == "exit":
         break
     else:
-        prompt = "create a spark sql query to get the data, the available tables are" + str(spark.catalog.listTables())+ "\n while the schema is: " + str(spark_df.columns)
+        prompt = "create a spark sql query to get the data, the available tables are" + str(spark.catalog.listTables())
+        # add the schemas of the views to the prompt
+        # TODO generalize
+        prompt += "The schemas of the data for the tables are: "
+        prompt += "patients2021 : " + str(spark_df_2021.columns)
+        prompt += "patients2022 : " + str(spark_df_2022.columns)
+        prompt += "patients2023 : " + str(spark_df_2023.columns)
         response = model.generate_content(user_input + prompt)
 
         # filter the sql query (localized by ```sql <sql query>```)
         sql_query = response.text[response.text.find("sql") + 4:response.text.find("```", response.text.find("sql"))]
+        print("The SQL query given is: ")
+        print(sql_query)
 
         if len(sql_query) == 0:
             print("No SQL query found")
